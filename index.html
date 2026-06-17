@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Central de Atividades Técnicas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="login-screen" id="loginScreen" aria-label="Tela de login">
+      <div class="login-card">
+        <div class="login-brand">
+          <span class="brand-mark">CT</span>
+          <div>
+            <strong>Central Técnica</strong>
+            <small>Acesso ao painel</small>
+          </div>
+        </div>
+        <form id="loginForm" class="login-form">
+          <label>
+            <span>Usuário</span>
+            <input id="loginUsername" type="text" required autocomplete="username" placeholder="admin" />
+          </label>
+          <label>
+            <span>Senha</span>
+            <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="••••••••" />
+          </label>
+          <p class="login-error hidden-field" id="loginError" role="alert"></p>
+          <button class="primary-button login-submit" type="submit">Entrar</button>
+        </form>
+        <p class="login-hint">Local: <strong>admin</strong> / <strong>admin</strong>. Online: use o e-mail cadastrado no Supabase.</p>
+      </div>
+    </div>
+
+    <div class="app-shell hidden-field" id="appShell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <span class="brand-mark">CT</span>
+          <div>
+            <strong>Central Técnica</strong>
+            <small>Operação de campo</small>
+          </div>
+        </div>
+
+        <div class="sidebar-user" id="sidebarUser">
+          <span class="sidebar-user-name" id="sidebarUserName">—</span>
+          <span class="sidebar-user-role badge" id="sidebarUserRole">—</span>
+        </div>
+
+        <nav class="nav-list" aria-label="Seções">
+          <button class="nav-item active" data-view-button="dashboard" data-nav-role="supervisor operador visualizador" type="button">Painel</button>
+          <button class="nav-item" data-view-button="calendar" data-nav-role="supervisor operador tecnico visualizador" type="button">Agenda</button>
+          <button class="nav-item" data-view-button="activities" data-nav-role="supervisor operador visualizador" type="button">Atividades</button>
+          <button class="nav-item" data-view-button="technicians" data-nav-role="supervisor visualizador" type="button">Técnicos</button>
+          <button class="nav-item" data-view-button="clients" data-nav-role="supervisor visualizador" type="button">Clientes</button>
+          <button class="nav-item" data-view-button="reports" data-nav-role="supervisor" type="button">Relatórios</button>
+          <button class="nav-item" data-view-button="users" data-nav-role="supervisor" type="button">Gerenciar Usuários</button>
+        </nav>
+
+        <button class="ghost-button sidebar-logout" id="logoutButton" type="button">Sair</button>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Painel de atividades</p>
+            <h1>Central de Atividades Técnicas</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="ghost-button" id="resetDemoButton" type="button">Restaurar demo</button>
+            <button class="primary-button" id="exportCsvButton" type="button">Exportar CSV</button>
+            <button class="primary-button" id="openActivityModal" type="button">Nova atividade</button>
+          </div>
+        </header>
+
+        <section class="summary-grid" aria-label="Resumo operacional">
+          <article class="metric">
+            <span class="metric-label">Atividades hoje</span>
+            <strong id="metricToday">0</strong>
+            <small id="metricTodayHint">Sem agenda para hoje</small>
+          </article>
+          <article class="metric">
+            <span class="metric-label">Em execução</span>
+            <strong id="metricRunning">0</strong>
+            <small>Atendimentos ativos</small>
+          </article>
+          <article class="metric">
+            <span class="metric-label">Atrasadas</span>
+            <strong id="metricLate">0</strong>
+            <small>Precisam de atenção</small>
+          </article>
+          <article class="metric">
+            <span class="metric-label">Improdutivas</span>
+            <strong id="metricUnproductive">0</strong>
+            <small>Sem execução concluída</small>
+          </article>
+        </section>
+
+        <section class="workspace view-section active" id="dashboardView">
+          <div class="toolbar" aria-label="Filtros do painel">
+            <label>
+              <span>Buscar</span>
+              <input id="searchInput" type="search" placeholder="ID, chamado, cliente, endereço" />
+            </label>
+            <label>
+              <span>Data</span>
+              <input id="dateFilter" type="date" />
+            </label>
+            <label>
+              <span>Técnico</span>
+              <select id="techFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="statusFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="status-tabs" id="statusTabs" aria-label="Atalhos por status"></div>
+
+          <section class="activity-layout">
+            <div class="activity-list-panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Atividades</h2>
+                  <span id="resultCount">0 registros</span>
+                </div>
+                <select id="sortSelect" aria-label="Ordenação">
+                  <option value="schedule-asc">Mais próximas</option>
+                  <option value="priority-desc">Maior prioridade</option>
+                  <option value="updated-desc">Atualizadas recentemente</option>
+                </select>
+              </div>
+              <div class="activity-list" id="activityList"></div>
+            </div>
+
+            <aside class="detail-panel" id="detailPanel" aria-label="Detalhes da atividade">
+              <div class="empty-detail">
+                <span class="empty-icon">+</span>
+                <h2>Selecione uma atividade</h2>
+                <p>Os detalhes, ações rápidas e histórico aparecem aqui.</p>
+              </div>
+            </aside>
+          </section>
+        </section>
+
+        <section class="calendar-view view-section" id="calendarView" aria-label="Agenda semanal">
+          <div class="calendar-header">
+            <div>
+              <p class="eyebrow">Agenda</p>
+              <h2>Calendário semanal por técnico</h2>
+            </div>
+            <div class="calendar-controls">
+              <label>
+                <span>Técnico</span>
+                <select id="calendarTechFilter">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+              <label>
+                <span>Semana de referência</span>
+                <input id="calendarDateFilter" type="date" />
+              </label>
+              <button class="ghost-button" id="calendarTodayButton" type="button">Hoje</button>
+            </div>
+          </div>
+
+          <div class="calendar-summary" id="calendarSummary"></div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <aside class="detail-panel calendar-detail-panel hidden-field" id="calendarDetailPanel" aria-label="Detalhes da atividade na agenda"></aside>
+        </section>
+
+        <section class="technicians-view view-section" id="techniciansView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Técnicos</p>
+              <h2>Equipe de campo</h2>
+            </div>
+            <button class="primary-button" id="openTechnicianModal" type="button">Novo técnico</button>
+          </div>
+
+          <div class="technician-summary" id="technicianSummary"></div>
+          <div class="technician-grid" id="technicianGrid"></div>
+        </section>
+
+        <section class="clients-view view-section" id="clientsView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Clientes</p>
+              <h2>Base de clientes</h2>
+            </div>
+            <button class="primary-button" id="openClientModal" type="button">Novo cliente</button>
+          </div>
+
+          <div class="client-summary" id="clientSummary"></div>
+          <div class="client-grid" id="clientGrid"></div>
+        </section>
+
+        <section class="users-view view-section" id="usersView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Administração</p>
+              <h2>Gerenciar usuários</h2>
+            </div>
+            <button class="primary-button" id="openUserModal" type="button">Novo usuário</button>
+          </div>
+
+          <div class="users-table-wrap">
+            <table class="users-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Usuário</th>
+                  <th>Nível</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="reports-view view-section" id="reportsView">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Relatórios</p>
+              <h2>Indicadores operacionais</h2>
+            </div>
+          </div>
+
+          <div class="reports-summary" id="reportsSummary">
+            <!-- Blocos de destaque com totais gerados dinamicamente -->
+          </div>
+
+          <div class="reports-grid">
+            <article class="reports-card">
+              <h3>Motivos de Improdutividade</h3>
+              <div class="unproductive-reasons" id="unproductiveReasons">
+                <!-- Motivos frequentes de improdutividade -->
+              </div>
+            </article>
+
+            <article class="reports-card">
+              <h3>Produtividade por Técnico</h3>
+              <div class="tech-ranking" id="techRanking">
+                <!-- Ranking de produtividade dos técnicos -->
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="modal" id="activityModal">
+      <form id="activityForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Cadastro</p>
+            <h2 id="modalTitle">Nova atividade</h2>
+          </div>
+          <button class="icon-button" id="closeActivityModal" value="cancel" type="button" aria-label="Fechar">x</button>
+        </div>
+
+        <input id="activityInternalId" type="hidden" />
+
+        <div class="form-grid">
+          <label>
+            <span>ID recebido</span>
+            <input id="activityId" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Número do chamado</span>
+            <input id="ticketNumber" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Cliente</span>
+            <input id="customer" required autocomplete="off" list="customerSuggestions" />
+          </label>
+          <datalist id="customerSuggestions"></datalist>
+          <label>
+            <span>Contato no local</span>
+            <input id="customerContact" autocomplete="off" />
+          </label>
+          <label>
+            <span>Telefone do contato</span>
+            <input id="customerPhone" autocomplete="off" placeholder="(00) 00000-0000" />
+          </label>
+          <label>
+            <span>Técnico responsável</span>
+            <input id="technician" required autocomplete="off" list="technicianSuggestions" />
+            <datalist id="technicianSuggestions"></datalist>
+          </label>
+          <label class="wide">
+            <span>Endereço/local</span>
+            <input id="address" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Cidade</span>
+            <input id="city" autocomplete="off" />
+          </label>
+          <label>
+            <span>Bairro/região</span>
+            <input id="district" autocomplete="off" />
+          </label>
+          <label>
+            <span>Tipo de serviço</span>
+            <input id="serviceType" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Data e hora</span>
+            <input id="scheduledAt" required type="datetime-local" />
+          </label>
+          <div class="conflict-warning hidden-field wide" id="activityConflictWarning"></div>
+          <label>
+            <span>Janela de atendimento</span>
+            <select id="serviceWindow">
+              <option value="">Não informada</option>
+              <option value="Manhã">Manhã</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Comercial">Comercial</option>
+              <option value="08h às 12h">08h às 12h</option>
+              <option value="13h às 18h">13h às 18h</option>
+              <option value="Personalizada">Personalizada</option>
+            </select>
+          </label>
+          <label id="customServiceWindowField" class="hidden-field">
+            <span>Janela personalizada</span>
+            <input id="customServiceWindow" autocomplete="off" placeholder="Ex.: 10h às 14h" />
+          </label>
+          <label>
+            <span>Prioridade</span>
+            <select id="priority" required>
+              <option value="baixa">Baixa</option>
+              <option value="normal" selected>Normal</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </label>
+          <label>
+            <span>Status</span>
+            <select id="status" required></select>
+          </label>
+          <label id="statusReasonField">
+            <span>Motivo do status</span>
+            <select id="statusReason">
+              <option value="">Selecione um motivo</option>
+            </select>
+          </label>
+          <label class="wide">
+            <span>Descrição</span>
+            <textarea id="description" rows="3"></textarea>
+          </label>
+          <label class="wide">
+            <span>Observações internas</span>
+            <textarea id="notes" rows="3"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelActivityForm" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Salvar atividade</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal technician-modal" id="technicianModal">
+      <form id="technicianForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Equipe</p>
+            <h2 id="technicianModalTitle">Novo técnico</h2>
+          </div>
+          <button class="icon-button" id="closeTechnicianModal" type="button" aria-label="Fechar">x</button>
+        </div>
+
+        <input id="technicianInternalId" type="hidden" />
+
+        <div class="form-grid">
+          <label>
+            <span>Nome</span>
+            <input id="technicianName" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Telefone</span>
+            <input id="technicianPhone" autocomplete="off" placeholder="(00) 00000-0000" />
+          </label>
+          <label>
+            <span>Região</span>
+            <input id="technicianRegion" autocomplete="off" />
+          </label>
+          <label>
+            <span>Equipe</span>
+            <input id="technicianTeam" autocomplete="off" />
+          </label>
+          <label class="wide">
+            <span>Status operacional</span>
+            <select id="technicianStatus" required>
+              <option value="disponivel">Disponível</option>
+              <option value="em-rota">Em rota</option>
+              <option value="em-atendimento">Em atendimento</option>
+              <option value="folga">Folga</option>
+              <option value="indisponivel">Indisponível</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelTechnicianForm" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Salvar técnico</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal technician-modal" id="clientModal">
+      <form id="clientForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Clientes</p>
+            <h2 id="clientModalTitle">Novo cliente</h2>
+          </div>
+          <button class="icon-button" id="closeClientModal" type="button" aria-label="Fechar">x</button>
+        </div>
+
+        <input id="clientInternalId" type="hidden" />
+
+        <div class="form-grid">
+          <label class="wide">
+            <span>Nome do cliente</span>
+            <input id="clientName" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Contato</span>
+            <input id="clientContact" autocomplete="off" />
+          </label>
+          <label>
+            <span>Telefone</span>
+            <input id="clientPhone" autocomplete="off" placeholder="(00) 00000-0000" />
+          </label>
+          <label class="wide">
+            <span>Observações</span>
+            <textarea id="clientNotes" rows="3"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelClientForm" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Salvar cliente</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal technician-modal" id="userModal">
+      <form id="userForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Usuários</p>
+            <h2 id="userModalTitle">Novo usuário</h2>
+          </div>
+          <button class="icon-button" id="closeUserModal" type="button" aria-label="Fechar">x</button>
+        </div>
+
+        <input id="userInternalId" type="hidden" />
+
+        <div class="form-grid">
+          <label class="wide">
+            <span>Nome completo</span>
+            <input id="userDisplayName" required autocomplete="off" placeholder="Ex.: Marcos Lima (igual ao técnico no campo)" />
+          </label>
+          <label>
+            <span>Usuário (login)</span>
+            <input id="userUsername" required autocomplete="off" />
+          </label>
+          <label>
+            <span>Senha</span>
+            <input id="userPassword" type="password" autocomplete="new-password" placeholder="Obrigatória para novo usuário" />
+          </label>
+          <label class="wide">
+            <span>Nível de acesso</span>
+            <select id="userRole" required>
+              <option value="supervisor">Supervisor</option>
+              <option value="operador">Operador</option>
+              <option value="tecnico">Técnico</option>
+              <option value="visualizador">Visualizador</option>
+            </select>
+          </label>
+          <p class="user-form-hint wide">Para perfil <strong>Técnico</strong>, o nome deve ser igual ao cadastrado nas atividades (campo técnico responsável).</p>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelUserForm" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Salvar usuário</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal reason-modal" id="statusReasonModal">
+      <form id="statusReasonForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Atualizar status</p>
+            <h2 id="statusReasonTitle">Informe o motivo</h2>
+          </div>
+          <button class="icon-button" id="closeStatusReasonModal" type="button" aria-label="Fechar">x</button>
+        </div>
+
+        <input id="quickStatusActivityId" type="hidden" />
+        <input id="quickStatusValue" type="hidden" />
+
+        <div class="form-grid">
+          <label class="wide">
+            <span>Motivo</span>
+            <select id="quickStatusReason" required></select>
+          </label>
+          <label class="wide">
+            <span>Detalhe opcional</span>
+            <textarea id="quickStatusNote" rows="3" placeholder="Ex.: cliente não estava no local"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelStatusReason" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Confirmar status</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

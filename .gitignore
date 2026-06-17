@@ -1,0 +1,28 @@
+# Configuração do Supabase (contém chaves API)
+supabase-config.js
+
+# Variáveis de ambiente locais
+.env.local
+.env
+.env.*.local
+
+# Arquivos de teste e temporários
+.tmp/
+.DS_Store
+*.log
+node_modules/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+
+# Backups
+*.bak
+*.backup
